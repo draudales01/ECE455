@@ -1,0 +1,4 @@
+ Threads: 1, Time : 0.0044094 sec , Sum : 1e+06
+ Threads: 2, Time : 0.00287359 sec , Sum : 1e+06
+ Threads: 4, Time : 0.00153766 sec , Sum : 1e+06
+ Threads: 8, Time : 0.00121727 sec , Sum : 1e+06
