@@ -4,7 +4,7 @@
 
 int main()
 {
-    const int N = 512;
+    const int N = 1024;
 
     std::vector<std::vector<int>> A(N, std::vector<int>(N, 1));
     std::vector<std::vector<int>> B(N, std::vector<int>(N, 2));
