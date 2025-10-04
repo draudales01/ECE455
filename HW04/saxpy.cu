@@ -12,12 +12,12 @@ int main(){
     y = (float*)malloc(size);
     x = (float*)malloc(size);
 
-    for(int i =0  i<N; i++){
+    for(int i =0;  i<N; i++){
         x[i] = 1.0f;
         y[i] = 2.0f;
     }
     cudaMalloc(&d_x, size);
-    cudaMalloc(&d_y, size):
+    cudaMalloc(&d_y, size);
     cudaMemcpy(d_x, x, size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_y, y, size, cudaMemcpyHostToDevice);
 

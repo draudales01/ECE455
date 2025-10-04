@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 __global__ void hello_kernel(){
-    int tid =  blockIdx.x * blockDim.x * threadIdx.x;
+    int tid =  blockIdx.x * blockDim.x + threadIdx.x;
     printf("Hello from thread %d\n",tid);
 }
 

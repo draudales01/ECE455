@@ -1,4 +1,4 @@
-#include <studio.h>
+#include <stdio.h>
 
 __global__ void vector_add(float *A, float *B, float *C, int N){
     int i = blockIdx.x*blockDim.x + threadIdx.x;
@@ -27,7 +27,7 @@ int main(){
         cudaMalloc(&d_C, size);
         cudaStream_t stream1, stream2;
         cudaStreamCreate(&stream1);
-        cudaStreamCreate(&steeam2);
+        cudaStreamCreate(&stream2);
 
         int half =  N/2;
         size_t half_size = size/2;
@@ -43,14 +43,14 @@ int main(){
         int blocksPerGrid = (half + threadsPerBlock -1)/threadsPerBlock;
 
         vector_add<<<blocksPerGrid, threadsPerBlock, 0, stream1>>>(d_A, d_B, d_C, half);
-        vector_add<<<blocksPerGrid, threadsPerBlock,0,stream2>>>(d_A + half,d_B + half, d_c + half, half );
+        vector_add<<<blocksPerGrid, threadsPerBlock,0,stream2>>>(d_A + half,d_B + half, d_C + half, half );
         cudaMemcpyAsync(C, d_C, half_size, cudaMemcpyDeviceToHost, stream1);
         cudaMemcpyAsync(C + half, d_C + half, half_size, cudaMemcpyDeviceToHost, stream2);
 
         cudaStreamSynchronize(stream1);
         cudaStreamSynchronize(stream2);
 
-        printf("C[0] = %f\n",C[0],C(N-1));
+        printf("C[0] = %f, C[N-1] = %f\n ",C[0],C[N-1]);
 
         cudaStreamDestroy(stream1);
         cudaStreamDestroy(stream2);

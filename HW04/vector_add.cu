@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <cuda_runtime.h>
 
-__global__ void vector_add(const float *A, const float *B, const float *C,int N){
+__global__ void vector_add(const float *A, const float *B, float *C,int N){
     int i = blockIdx.x *blockDim.x + threadIdx.x;
     if(i<N){
         C[i] = A[i] + B[i];
@@ -18,7 +18,7 @@ int main(){
     float *h_B = (float*)malloc(size);
     float *h_C = (float*)malloc(size);
 
-    for(int i =0;i<Ni++){
+    for(int i =0;i<N;i++){
         h_A[i] = 1.0f;
         h_B[i] = 2.0f;
     }
