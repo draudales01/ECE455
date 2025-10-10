@@ -1,5 +1,5 @@
 #include <cassert>
-#include <cstdef>
+#include <cstddef>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
@@ -8,79 +8,113 @@
 #include <vector>
 
 #define BLOCK_DIM 32
-#define MAT_DIM 1024
+#define MAT_DIM 1024 
 
-//Checks for CUDA errors when calling CUDA functions
 #define checkCuda(val) check((val), #val, __FILE__, __LINE__)
-void check(cudaError_t err, const char* const func, const char* const file, const int line ){
-    if (err != cudaSucess){
-        std::cerr << "CUDA Runtime Error at: " << file << ":" << line << std::endl;
+void check(cudaError_t err, const char* const func, const char* const file,
+           const int line)
+{
+    if (err != cudaSuccess)
+    {
+        std::cerr << "CUDA Runtime Error at: " << file << ":" << line
+                  << std::endl;
         std::cerr << cudaGetErrorString(err) << " " << func << std::endl;
         std::exit(EXIT_FAILURE);
     }
 }
 
-//creating vectors
 template <typename T>
-std::vector<T> create_rand_vector(size_t n){
+std::vector<T> create_rand_vector(size_t n)
+{
     std::random_device r;
     std::default_random_engine e(r());
-    std::uniform_real_distribution<T> uniform_dist(-256, 256);
+    std::uniform_int_distribution<int> uniform_dist(-256, 256);
+
     std::vector<T> vec(n);
-    for (size_t i{0}; i<n; ++i){
+    for (size_t i{0}; i < n; ++i)
+    {
         vec.at(i) = static_cast<T>(uniform_dist(e));
-    } 
+    }
+
     return vec;
 }
-//sequential matrix multiplication naive implementation
+
+// mat_1: m x n
+// mat_2: n x p
+// mat_3: m x p
 template <typename T>
-void mm (T const* mat_1, T const* mat_2, T* mat_3, size_t m, size_t n, size_t p){
-    for (size_t i{0}; i<m; ++i){
-        for (size_t j{0}; j<p; ++j){
+void mm(T const* mat_1, T const* mat_2, T* mat_3, size_t m, size_t n, size_t p)
+{
+    // Compute the cells in mat_3 sequentially.
+    for (size_t i{0}; i < m; ++i)
+    {
+        for (size_t j{0}; j < p; ++j)
+        {
             T acc_sum{0};
-            for (size_t k{0}; k<n; ++k){
-                acc_sum += mat_1[i*n + k]*mat_2[k*p + j];
+            for (size_t k{0}; k < n; ++k)
+            {
+                acc_sum += mat_1[i * n + k] * mat_2[k * p + j];
             }
-            mat_3[i*p + j] = acc_sum;
+            mat_3[i * p + j] = acc_sum;
         }
     }
-
 }
-// parallelism calculate single cell a time..
+
+
 template <typename T>
-__global__ void mm_kernel (T const* mat_1, T const* mat_2, T* mat_3, size_t m, size_t n, size_t p){
-    size_t i{blockIdx.x+blockDim.x + threadIdz.x};
-    size_t j{blockIdx.y+blockDim.y + threadIdz.y};
-    if((i>=m)||(j>=p)){
-        return; 
+__global__ void mm_kernel(T const* mat_1, T const* mat_2, T* mat_3, size_t m,
+                          size_t n, size_t p)
+{
+    // 2D block and 2D thread
+    // Each thread computes one cell in mat_3.
+    size_t i{blockIdx.x * blockDim.x + threadIdx.x};
+    size_t j{blockIdx.y * blockDim.y + threadIdx.y};
+
+    // Do not process outside the matrix.
+    // Do not forget the equal sign!
+    if ((i >= m) || (j >= p))
+    {
+        return;
     }
-    
+
     T acc_sum{0};
-
-    for(size_t k{0}; k<n; ++k){
-        acc_sum += mat_1[i*n+k]*mat_2[k*p+j];
+    for (size_t k{0}; k < n; ++k)
+    {
+        acc_sum += mat_1[i * n + k] * mat_2[k * p + j];
     }
-    mat_3[i*p+j] = acc_sum;
-
+    mat_3[i * p + j] = acc_sum;
 }
 
-//cuda device calculating
+
 template <typename T>
-void mm_cuda(T const* mat_1, T const* mat_2, T* mat_3, size_t m, size_t n, size_t p){
-   dim3 threads_per_block(BLOCK_DIM, BLOCK_DIM);
-   dim3 blocks_per_grid(1,1);
-   blocks_per_grid.x = std::ceil(static_cast<double>(p)/static_cast<double>(threads_per_block.x));
-   blocks_per_grid.y = std::ceil(static_cast<double>(m)/static_cast<double>(threads_per_block.y));
-   mm_kernel <<<blocks_per_grid, threads_per_block>>>(mat_1, mat_2, mat_3, m, n, p);
+void mm_cuda(T const* mat_1, T const* mat_2, T* mat_3, size_t m, size_t n,
+             size_t p)
+{
+    dim3 threads_per_block(BLOCK_DIM, BLOCK_DIM);
+    dim3 blocks_per_grid(1, 1);
+    blocks_per_grid.x = std::ceil(static_cast<double>(p) /
+                                  static_cast<double>(threads_per_block.x));
+    blocks_per_grid.y = std::ceil(static_cast<double>(m) /
+                                  static_cast<double>(threads_per_block.y));
+    mm_kernel<<<blocks_per_grid, threads_per_block>>>(mat_1, mat_2, mat_3, m, n,
+                                                      p);
 }
 
-template <typename T> 
-bool allClose(std::vector<T> const& vec1, std::vector<T> const& vec2, T const& abs_tol){
-    if(vec1.size() != vec2.size()){
+
+
+template <typename T>
+bool allclose(std::vector<T> const& vec_1, std::vector<T> const& vec_2,
+              T const& abs_tol)
+{
+    if (vec_1.size() != vec_2.size())
+    {
         return false;
     }
-    for(size_t i{0}; i<vec1.size();++i){
-        if(std::abs(vec1.at(i)-vec2.at(i))>abs_tol){
+    for (size_t i{0}; i < vec_1.size(); ++i)
+    {
+        if (std::abs(vec_1.at(i) - vec_2.at(i)) > abs_tol)
+        {
+            std::cout << vec_1.at(i) << " " << vec_2.at(i) << std::endl;
             return false;
         }
     }
@@ -205,6 +239,8 @@ float measure_latency_mm_cuda(size_t m, size_t n, size_t p, size_t num_tests,
 
     return latency;
 }
+
+
 
 int main()
 {

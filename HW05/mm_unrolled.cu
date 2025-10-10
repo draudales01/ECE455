@@ -39,7 +39,6 @@ std::vector<T> create_rand_vector(size_t n)
     return vec;
 }
 
-
 // mat_1: m x n
 // mat_2: n x p
 // mat_3: m x p
@@ -60,9 +59,37 @@ void mm(T const* mat_1, T const* mat_2, T* mat_3, size_t m, size_t n, size_t p)
     }
 }
 
+// ------------------- Loop-Unrolled Kernel -------------------
+template <typename T>
+__global__ void mm_unrolled_kernel(T const* mat_1, T const* mat_2, T* mat_3,
+                                   size_t m, size_t n, size_t p)
+{
+    size_t j{blockIdx.x * blockDim.x + threadIdx.x};
+    size_t i{blockIdx.y * blockDim.y + threadIdx.y};
 
+    if ((i >= m) || (j >= p))
+    {
+        return;
+    }
 
+    T acc_sum{0};
+    size_t k{0};
+    for (; k + 3 < n; k += 4)
+    {
+        acc_sum += mat_1[i * n + (k + 0)] * mat_2[(k + 0) * p + j];
+        acc_sum += mat_1[i * n + (k + 1)] * mat_2[(k + 1) * p + j];
+        acc_sum += mat_1[i * n + (k + 2)] * mat_2[(k + 2) * p + j];
+        acc_sum += mat_1[i * n + (k + 3)] * mat_2[(k + 3) * p + j];
+    }
+    for (; k < n; ++k)
+    {
+        acc_sum += mat_1[i * n + k] * mat_2[k * p + j];
+    }
 
+    mat_3[i * p + j] = acc_sum;
+}
+
+// ------------------- Launcher -------------------
 template <typename T>
 void mm_cuda(T const* mat_1, T const* mat_2, T* mat_3,
              size_t m, size_t n, size_t p)
