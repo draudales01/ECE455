@@ -1,4 +1,5 @@
-#include "<taskflow/taskflow.hpp>"
+#include <taskflow/taskflow.hpp>
+#include <cstdio>
 
 int main() {
   tf::Executor executor;
@@ -14,7 +15,7 @@ int main() {
     printf("Loop iteration %d\n",counter);
     counter++;
     return (counter< limit) ? 0 : 1;
-  }).condition();
+  });
 
   auto done = taskflow.emplace([](){
     printf("Loop done.\n");
